@@ -24,4 +24,4 @@ def graphe_non_oriente(n, k):
 
 "Une fonction longueur sur les arcs"
 def longueur(x, y):
-  return x^3 + (x + 2*y -1) ^2
+  return 1
