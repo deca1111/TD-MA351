@@ -71,7 +71,7 @@ def connexe(G):
 
 def test_connexe():
 	graphe_ex = {'a':['b','c'], 'b':['a','c'], 'c':['a','b','d'], 'd':['c'], 'e':[]}
-	return degre(graphe_ex)
+	return connexe(graphe_ex)
 
 """
 3 - Cycles eulériens ; graphes eulériens
@@ -129,7 +129,7 @@ def retireArete(G,x,y):#on considère que l'arete xy existe
 
 def test_retireArete():
 	graphe_ex = {'a':['b','c'], 'b':['a','c'], 'c':['a','b','d'], 'd':['c'], 'e':[]}
-	return retireArete(graphe_ex)
+	return retireArete(graphe_ex,'a','b')
 
 
 """
@@ -154,7 +154,9 @@ def test_retireArete():
 		jusqu'à retourner au sommet de départ, comme le sommet est commun aux 2
 		cycles on peut maintenant parcourir le second cycle jusqu'à retourner au
 		sommet de départ.
-		On a bien parcouru un cycle contenant les aretes des 2 cycles C1 et C2.
+		On a bien parcouru les aretes des 2 cycles C1 et C2 en partant et
+		arrivant d'un même sommet. Et comme C1 et C2 n'ont pas d'arrète en commun
+		on vient bien de parcourir un cycle (une chaˆıne simple, close, de longueur > 0)
 
 	12)	On procède par l'absurde, soit G un graphe non-orienté connexe. C un
 		cycle de G et G' le graphe obtenu en retirant de G le cycle C.
@@ -175,16 +177,88 @@ def cycle(G,s):
 	copie = sous_graphe(G, list(G)) #copie de G
 	sommet_actu = s
 	sommet_next = G[s][0]
-	retireArete(sommet_actu,sommet_next)
+	retireArete(copie,sommet_actu,sommet_next)
 	cycle = [sommet_actu,sommet_next]
 
 	while sommet_next != s:
 		sommet_actu = sommet_next
-		sommet_next = G[sommet_actu][0]
-		retireArete(sommet_actu,sommet_next)
+		sommet_next = copie[sommet_actu][0]
+		retireArete(copie,sommet_actu,sommet_next)
 		cycle.append(sommet_next)
 	return cycle
 
 def test_cycle():
-	graphe_ex = {'a':['b','c'], 'b':['a','c'], 'c':['a','b','d'], 'd':['c'], 'e':[]}
-	return cycle(graphe_ex)
+	graphe_ex1 = {'a':['b','c'], 'b':['a','c'], 'c':['a','b'], 'd':[], 'e':[]}
+	graphe_ex2 = {'a':['b','c'], 'b':['a','e'], 'c':['a','d'], 'd':['c','e'], 'e':['d','b']}
+	return cycle(graphe_ex1,'a')
+
+#14
+def sommetDegreNonNul(G,S):
+	for s in S:
+		if degre(G,s) != 0:
+			return s
+	return None
+
+def test_sommetDegreNonNul():
+	graphe_ex1 = {'a':['b','c'], 'b':['a','c'], 'c':['a','b'], 'd':[], 'e':[]}
+	return sommetDegreNonNul(graphe_ex1,['d','e','a'])
+
+#15
+def cycleDepuis(listeSommets,x):
+	index_x = listeSommets.index(x);
+	return listeSommets[index_x:]+listeSommets[1:index_x+1]
+
+def test_cycleDepuis():
+	cycle_test = ['a','b','c','d','a']
+	return cycleDepuis(cycle_test,'a')
+
+#16
+def unionCycle(C1,C2,x):
+	return cycleDepuis(C1,x)+cycleDepuis(C2,x)[1:]
+
+def test_unionCycle():
+	C1 = ['a','b','c','a']
+	C2 = ['d','e','c','d']
+	return unionCycle(C1,C2,'c')
+
+#17
+def composanteOuCycle(G):
+	#Pour rendre la fonction non destructive on copie G
+	G_ = sous_graphe(G,list(G))
+	#Si jamais G n'est pas connexe on retourne une composante connexe
+	if(len(p := partition(G_)) != 1):
+		return p[0]
+
+	cycle_unique = []
+	print("Graphe :",G_)
+	print("Cycle unique :",cycle_unique)
+
+	while list(G_):
+		depart_cycle = list(G_)[0]
+		cycle_actuel = cycle(G_,depart_cycle)
+		print("Cycle actuel:",cycle_actuel)
+		#on supprime les arete du cycle et les sommets qui ne sont plus connectés
+		for index in range(len(cycle_actuel)-1):
+			retireArete(G_,cycle_actuel[index],cycle_actuel[index+1])
+
+		for index in range(len(cycle_actuel)-1):
+			if degre(G_,cycle_actuel[index])==0:
+				del G_[cycle_actuel[index]]
+
+		if cycle_unique == []:
+			#cas du premier passage dans la boucle
+			cycle_unique = cycle_actuel
+		else:
+			#on lie le nouveau cycle avec le cycle unique
+			sommet_commun = set(cycle_actuel)&set(cycle_unique)
+			cycle_unique = unionCycle(cycle_actuel,cycle_unique,list(sommet_commun)[0])
+		print("Graphe :",G_)
+		print("Cycle unique :",cycle_unique)
+	return cycle_unique
+
+def test_composanteOuCycle():
+	graphe_ex1 = {'a':['b','c'], 'b':['a','c'], 'c':['a','b'], 'd':[], 'e':[]}
+	graphe_ex2 = {'a':['b','c'], 'b':['a','e'], 'c':['a','d'], 'd':['c','e'], 'e':['d','b']}
+	graphe_ex3 = {'a':['b','c'], 'b':['a','e','f','c'], 'c':['a','d','b','e'], 'd':['c','e'], 'e':['d','b','c','f'], 'f':['b','e']}
+	graphe_ex4 = {'a':['b','c'], 'b':['a','c','d','e'], 'c':['a','b','f','g'], 'd':['b','e'], 'e':['b','d'], 'g':['c','f'], 'f':['c','g']}
+	return composanteOuCycle(graphe_ex4)
